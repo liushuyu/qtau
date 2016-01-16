@@ -1,0 +1,7 @@
+QTau editor (updated version with support for eCantorix and v.Connect-stand support)
+
+Note editor inspired by Vocaloid, UTAU and Cadencii, uses Qt.
+ * License: GPLv3
+ * Dependencies: Qt 5, Jack
+ * OS: any supported by Qt and Jack, GNU/Linux strongly recommended
+ 
