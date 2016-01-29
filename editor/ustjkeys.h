@@ -5,4 +5,9 @@
 #define NOTE_PULSE_LENGTH "pulseLength"
 #define NOTE_KEY_NUMBER "keyNumber"
 #define NOTE_VELOCITY "velocity"
+#define USER_AGENT "userAgent"
+#define TIME_SIGNATURE "timeSignature"
+#define TEMPO "tempo"
+#define SINGER_NAME "singerName"
+
 #endif

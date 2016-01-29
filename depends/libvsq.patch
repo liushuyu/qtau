@@ -1,0 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d1acfe3..07a85dc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -14,7 +14,7 @@ IF(COVERAGE)
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -coverage")
+ ENDIF()
+ 
+-ADD_LIBRARY(vsq STATIC
++ADD_LIBRARY(vsq SHARED
+     include/libvsq/ArticulationType.hpp
+     include/libvsq/BP.hpp
+     include/libvsq/BPList.hpp
+@@ -140,3 +140,12 @@ ADD_LIBRARY(vsq STATIC
+     src/BP.cpp
+     include/libvsq/libvsq.h
+     include/libvsq/PublicForUnitTest.hpp)
++
++install(DIRECTORY include/libvsq
++    DESTINATION include
++    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
++
++install(TARGETS vsq
++    LIBRARY DESTINATION lib
++)
++

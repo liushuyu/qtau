@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+FILE=TETO-tandoku-100619.zip
+URL=http://kasaneteto.jp/ongendl/index.cgi/tandoku/$FILE
+
+. utauloid
+
+function unpack {
+	unzip -O shift-jis TETO-tandoku-100619.zip
+	find 重音テト音声ライブラリー -name "*.frq" -exec rm {} \;
+	rm install.txt
+}
+
+function convert {
+	pushd ./重音テト音声ライブラリー/重音テト単独音
+	romajiFiles
+	romajiOtoSjis
+	popd
+	mkdir TetoConnect
+	vconnect_stand -c -i ./重音テト音声ライブラリー/重音テト単独音/oto.ini -o TetoConnect
+	cat voice_template.json | sed 's/UTAU_VOICEBANK/TetoConnect CV/' > TetoConnect/voices.json
+	echo "The voicebank Kasane Teto"						> TetoConnect/COPYING
+	echo "© Oyamano Mayo 2008. All rights reserved."		>> TetoConnect/COPYING
+	rm -rf 重音テト音声ライブラリー
+	rm $FILE
+}
+
+download
+unpack
+convert
+
+mkdir -p ~/.local/share/utau/voice
+mv TetoConnect ~/.local/share/utau/voice

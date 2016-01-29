@@ -35,10 +35,19 @@
 #include <QJsonDocument>
 
 
+
+
 qtauSession::qtauSession(QObject *parent) :
     qtauEventManager(parent), _docName(QStringLiteral("Untitled")), _isModified(false), _hadSavePoint(false)
 {
     _needsSynth=true;
+    _defaults[USER_AGENT] = QString("QTau Debug");
+    _defaults[TEMPO]=120;
+    QJsonArray ts;
+    ts.append(4);
+    ts.append(4);
+    _defaults[TIME_SIGNATURE]=ts;
+    _objectMap[-1] = _defaults;
 }
 
 qtauSession::~qtauSession()
@@ -83,13 +92,20 @@ qtauEvent_NoteAddition *util_makeAddNotesEvent(QJsonArray &a)
 bool qtauSession::loadUST(QJsonArray array)
 {
 
+    //TODO default tempo
+
+
+
     if (!array.isEmpty())
     {
         _needsSynth=true;
         clearHistory();
 
         auto o = array[0];
-        _objectMap[-1] = o.toObject();
+        if(o.toObject().contains(USER_AGENT))
+            _objectMap[-1] = o.toObject();
+        else
+            {/*TODO*/}
 
 
         qtauEvent_NoteAddition *loadNotesChangeset = util_makeAddNotesEvent(array);
@@ -429,6 +445,18 @@ void qtauSession::importMIDI(QString fileName)
 
     if(smf==NULL) return;
 
+    smf_tempo_t* tempo = smf_get_tempo_by_pulses(smf,0);
+    fprintf(stderr,"TT_MIDI: %i %i %i\n",tempo->numerator,tempo->denominator,tempo->microseconds_per_quarter_note);
+    QJsonArray ts;
+    ts.append(tempo->numerator);
+    ts.append(tempo->denominator);
+    setTimeSignature(ts);
+    float bpm=tempo->microseconds_per_quarter_note/(1000.0*1000.0);
+    bpm=60.0/bpm;
+    fprintf(stderr,"TEMPO %f\n",bpm);
+    setTempo(round(bpm));
+
+
 
     smf_track_t *track = smf_get_track_by_number(smf, smf->number_of_tracks);
     int activeNote = -1;
@@ -462,8 +490,8 @@ void qtauSession::importMIDI(QString fileName)
                     int length = (event->time_pulses-notePos);
                     QJsonObject note;
                     //qDebug() << notePos << "::" << length;
-                    note[NOTE_PULSE_OFFSET]= notePos;
-                    note[NOTE_PULSE_LENGTH]= length;
+                    note[NOTE_PULSE_OFFSET]= notePos*4;
+                    note[NOTE_PULSE_LENGTH]= length*4;
                     note[NOTE_KEY_NUMBER] = activeNote;
                     note[NOTE_VELOCITY]=velocity;
                     if(text.length()==0) text="[[a]]";
@@ -506,6 +534,38 @@ void qtauSession::exportMIDI(QString fileName)
     track = smf_track_new();
     smf_add_track(smf, track);
 
+#if 1
+    int bpm = getTempo();
+    track = smf_track_new();
+    smf_add_track(smf, track);
+    char temposig[6];
+    int tempo=60*1000*1000/bpm;
+    temposig[0] = 0xFF;
+    temposig[1] = 0x51;
+    temposig[2] = 0x03;
+    temposig[3] = (tempo >> 16) & 0xFF;
+    temposig[4] = (tempo >> 8) & 0xFF;
+    temposig[5] = (tempo) & 0xFF;
+    event = smf_event_new_from_pointer(temposig, 6);
+    smf_track_add_event_pulses(track,event,0);
+    char timesig[7];
+    timesig[0] = 0xFF;
+    timesig[1] = 0x58;
+    timesig[2] = 0x04;
+    QJsonArray a = getTimeSignature();
+    int nn=a[0].toInt();
+    int dd=a[1].toInt();
+    dd = log(dd)/log(2);
+    fprintf(stderr,"LOG: %i %i\n",nn,dd);
+    timesig[3] = nn;
+    timesig[4] = dd;
+    timesig[5] = 0;
+    timesig[6] = 8;
+    event = smf_event_new_from_pointer(timesig, 7);
+    smf_track_add_event_pulses(track,event,0);
+#endif
+
+
     for (int i = 0; i < ust.count(); ++i)
     {
         auto o = ust[i];
@@ -521,6 +581,9 @@ void qtauSession::exportMIDI(QString fileName)
         int noteOffset = o.toObject()[NOTE_PULSE_OFFSET].toInt();
         int noteLength = o.toObject()[NOTE_PULSE_LENGTH].toInt();
 
+        if(noteLength>0)
+        {
+
         event = smf_event_new_from_pointer(midi, 3);
         smf_track_add_event_pulses(track,event,ts*noteOffset);
 
@@ -533,11 +596,14 @@ void qtauSession::exportMIDI(QString fileName)
 
 
         smf_track_add_event_pulses(track,event,ts*noteOffset);
-
-
         midi[0]=0x80;
         event = smf_event_new_from_pointer(midi, 3);
         smf_track_add_event_pulses(track,event,ts*(noteOffset+noteLength));
+
+
+        }
+
+
 
     }
 
@@ -575,6 +641,10 @@ void qtauSession::onNewSession()
     QJsonArray empty;
 
     clearHistory(); // or make a delete event + settings change event + filepath change event
+    _objectMap.clear();
+    _objectMap[-1]          = _defaults; //defaults
+
+
 
     _docName  = "Untitled";
     _filePath = "";
@@ -587,12 +657,14 @@ void qtauSession::onNewSession()
     delete loadNotesChangeset;
 }
 
+// set/get proptery
+
 void qtauSession::setSingerName(QString singerName)
 {
     //qDebug() << "setSingerName";
     QJsonObject obj;
     if(_objectMap.contains(-1)) obj=_objectMap[-1];
-    obj["SingerName"] = singerName;
+    obj[SINGER_NAME] = singerName;
     _objectMap[-1] = obj;
     _isModified = true;
     emit modifiedStatus(_isModified);
@@ -602,14 +674,14 @@ QString qtauSession::getSingerName()
 {
     QJsonObject obj;
     if(_objectMap.contains(-1)) obj=_objectMap[-1];
-    return obj["SingerName"].toString();
+    return obj[SINGER_NAME].toString();
 }
 
 int qtauSession::getTempo()
 {
     QJsonObject obj;
     if(_objectMap.contains(-1)) obj=_objectMap[-1];
-    return obj["Tempo"].toDouble();
+    return obj[TEMPO].toDouble();
 }
 
 void qtauSession::setTempo(int tempo)
@@ -617,7 +689,7 @@ void qtauSession::setTempo(int tempo)
     //qDebug() << "setSingerName";
     QJsonObject obj;
     if(_objectMap.contains(-1)) obj=_objectMap[-1];
-    obj["Tempo"] = tempo;
+    obj[TEMPO] = tempo;
     _objectMap[-1] = obj;
     _isModified = true;
     emit modifiedStatus(_isModified);
@@ -627,16 +699,17 @@ QJsonArray qtauSession::getTimeSignature()
 {
     QJsonObject obj;
     if(_objectMap.contains(-1)) obj=_objectMap[-1];
-    return obj["TimeSignature"].toArray();
+    return obj[TIME_SIGNATURE].toArray();
 }
 
 void qtauSession::setTimeSignature(QJsonArray ts)
 {
      QJsonObject obj;
      if(_objectMap.contains(-1)) obj=_objectMap[-1];
-      obj["TimeSignature"] = ts;
+      obj[TIME_SIGNATURE] = ts;
      _objectMap[-1] = obj;
      _isModified = true;
      emit modifiedStatus(_isModified);
 }
 
+//FIXME global set/get for root json object

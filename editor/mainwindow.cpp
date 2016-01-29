@@ -650,6 +650,7 @@ void MainWindow::onSaveUSTAs()
 {
     QString fileName = QFileDialog::getSaveFileName(this,
                                                     tr("Save USTJ"), _lastScoreDir, tr("UTAU JSON Sequence Text Files (*.ustj)"));
+    if(!fileName.endsWith(".ustj")) fileName+=".ustj";
 
     if (!fileName.isEmpty())
     {
@@ -676,6 +677,8 @@ void MainWindow::onMIDIExport()
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export as MIDI"),
                                                     QString(),
                                                     tr("MIDI Files (*.mid *.mid *.smf)"));
+    if(!fileName.endsWith(".mid")) fileName+=".mid";
+
     _doc->exportMIDI(fileName);
 }
 

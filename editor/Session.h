@@ -78,6 +78,8 @@ public:
     void setTimeSignature(QJsonArray ts);
 
 
+
+
 signals:
     void modifiedStatus(bool); /// if document is modified
     void undoStatus    (bool); /// if can undo last stored action
@@ -120,6 +122,7 @@ protected:
     bool    _hadSavePoint; // if was saved having a non-empty event stack
     bool    _needsSynth;
     QMap<qint64, QJsonObject> _objectMap; // need to store copies until changing data structure to something better
+    QJsonObject _defaults;
 
 
     void applyEvent_NoteAdded  (const qtauEvent_NoteAddition &event);

@@ -5,12 +5,8 @@ TEMPLATE = lib
 CONFIG  += plugin
 TARGET   = $$qtLibraryTarget(vconnectsynth)
 
-
-#you need to change the path to libvsq if you want to use vconnect-stand
-#libvsq is at https://github.com/kbinani/libvsq
-INCLUDEPATH += ../../editor ../ ../../tools /home/tobiasplaten/Projects/Music/libvsq/include
-LIBS += -lespeak -lsndfile -Wl,--no-undefined -L/home/tobiasplaten/Projects/Music/libvsq/build -lvsq
-#get vconnect-stand from https://mentors.debian.net/package/vconnectstand
+INCLUDEPATH += ../../editor ../ ../../tools /usr/local/libvsq/include
+LIBS += -lespeak -lsndfile -Wl,--no-undefined -lvsq
 
 PKGCONFIG += glib-2.0
 

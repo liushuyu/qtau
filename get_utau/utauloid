@@ -1,0 +1,15 @@
+function romajiFiles {
+	for f in *.wav
+	do
+		mv $f $(echo $f|iconv -t eucjp | kakasi -Ha -Ka)
+	done
+}
+
+function romajiOtoSjis {
+	cat oto.ini | iconv -f sjis -t eucjp | kakasi -Ha -Ka > tmp
+	mv tmp oto.ini
+}
+
+function download {
+	wget $URL
+}
